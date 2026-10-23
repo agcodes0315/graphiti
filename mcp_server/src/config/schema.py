@@ -89,6 +89,13 @@ class OpenAIProviderConfig(BaseModel):
 
     api_key: str | None = None
     api_url: str = 'https://api.openai.com/v1'
+    api_mode: Literal['responses', 'chat'] | None = Field(
+        default=None,
+        description=(
+            'OpenAI API mode: responses uses the Responses API, '
+            'chat uses Chat Completions. If unset, infer from the API URL.'
+        ),
+    )
     organization_id: str | None = None
 
 

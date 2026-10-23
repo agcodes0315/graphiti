@@ -165,7 +165,12 @@ class LLMClientFactory:
                 )
 
                 # Detect if we're using a non-OpenAI provider (Ollama, LM Studio, etc)
-                use_generic_client = is_non_openai_provider(config.providers.openai.api_url)
+                api_mode = config.providers.openai.api_mode
+
+                if api_mode is None:
+                    use_generic_client = is_non_openai_provider(config.providers.openai.api_url)
+                else:
+                    use_generic_client = api_mode == 'chat'
 
                 if use_generic_client:
                     # Use OpenAIGenericClient for Ollama and other OpenAI-compatible providers

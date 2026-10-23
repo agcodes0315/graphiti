@@ -176,3 +176,64 @@ class TestAzureReasoningEffort:
         client = LLMClientFactory.create(self._config('gpt-4.1'))
         assert isinstance(client, AzureOpenAILLMClient)
         assert client.reasoning is None
+
+
+class TestExplicitOpenAIAPIMode:
+    """Explicit API mode overrides the endpoint hostname."""
+
+    @pytest.mark.parametrize(
+        ('api_url', 'api_mode', 'expected_client'),
+        [
+            ('https://proxy.example.com/v1', 'responses', OpenAIClient),
+            ('https://api.openai.com/v1', 'chat', OpenAIGenericClient),
+            ('https://proxy.example.com/v1', 'chat', OpenAIGenericClient),
+            ('https://api.openai.com/v1', 'responses', OpenAIClient),
+        ],
+    )
+    def test_explicit_api_mode_overrides_hostname(self, api_url, api_mode, expected_client):
+        config = LLMConfig(
+            provider='openai',
+            model='gpt-5.5',
+            providers=LLMProvidersConfig(
+                openai=OpenAIProviderConfig(
+                    api_key='test-key',
+                    api_url=api_url,
+                    api_mode=api_mode,
+                )
+            ),
+        )
+
+        client = LLMClientFactory.create(config)
+
+        assert isinstance(client, expected_client)
+
+    @pytest.mark.parametrize(
+        ('api_url', 'expected_client'),
+        [
+            ('https://api.openai.com/v1', OpenAIClient),
+            ('https://proxy.example.com/v1', OpenAIGenericClient),
+        ],
+    )
+    def test_unset_mode_preserves_legacy_routing(self, api_url, expected_client):
+        config = LLMConfig(
+            provider='openai',
+            model='gpt-5.5',
+            providers=LLMProvidersConfig(
+                openai=OpenAIProviderConfig(
+                    api_key='test-key',
+                    api_url=api_url,
+                )
+            ),
+        )
+
+        assert config.providers.openai.api_mode is None
+        assert isinstance(LLMClientFactory.create(config), expected_client)
+
+    def test_invalid_api_mode_is_rejected(self):
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
+            OpenAIProviderConfig(
+                api_key='test-key',
+                api_mode='invalid',
+            )
